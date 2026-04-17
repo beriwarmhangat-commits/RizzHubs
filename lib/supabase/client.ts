@@ -1,30 +1,43 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+let clientInstance: ReturnType<typeof createBrowserClient> | null = null
+
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-  const isValid = supabaseUrl && supabaseKey && 
-                  !supabaseUrl.includes('placeholder') && 
-                  supabaseUrl.startsWith('http')
-
-  if (!isValid) {
-    console.error('[Supabase] Invalid credentials. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local')
+  // For SSR/build time, return a mock
+  if (typeof window === 'undefined') {
+    return createMockClient()
   }
 
+  // Browser: use real client
+  if (!clientInstance) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Supabase] Missing credentials in browser')
+      return createMockClient()
+    }
+
+    clientInstance = createBrowserClient(supabaseUrl, supabaseKey)
+  }
+
+  return clientInstance
+}
+
+function createMockClient() {
   return {
     auth: {
       signInWithPassword: async () => ({ 
-        error: !isValid ? { message: 'Supabase not configured. Please contact administrator.' } : null,
+        error: { message: 'Supabase not configured. Please contact administrator.' },
         data: null 
       }),
       signUp: async () => ({ 
-        error: !isValid ? { message: 'Supabase not configured. Please contact administrator.' } : null,
+        error: { message: 'Supabase not configured. Please contact administrator.' },
         data: null 
       }),
       signOut: async () => ({ error: null }),
       getUser: async () => ({ 
-        error: !isValid ? { message: 'Not authenticated' } : null,
+        error: { message: 'Not authenticated' },
         data: { user: null } 
       }),
     },
@@ -33,8 +46,6 @@ export function createClient() {
       insert: () => ({ select: () => ({ single: () => ({ data: null, error: { message: 'Supabase not configured' } }) }) }),
       delete: () => ({ eq: () => ({ error: null }) }),
     }),
-    _isMock: !isValid,
-    _realClient: isValid ? createBrowserClient(supabaseUrl, supabaseKey) : null
   } as any
 }
 
