@@ -16,24 +16,38 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError || !user) {
+          router.push('/auth/login')
+          return
+        }
+        setUser(user)
+        await fetchPastes(user.id)
+      } catch (err) {
+        console.error('Auth check error:', err)
         router.push('/auth/login')
-        return
       }
-      setUser(user)
-      fetchPastes(user.id)
     }
 
     const fetchPastes = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('pastes')
-        .select('*')
-        .eq('author_id', userId)
-        .order('created_at', { ascending: false })
+      try {
+        const { data, error } = await supabase
+          .from('pastes')
+          .select('*')
+          .eq('author_id', userId)
+          .order('created_at', { ascending: false })
 
-      if (!error) setPastes(data || [])
-      setLoading(false)
+        if (!error) {
+          setPastes(data || [])
+        } else {
+          console.error('Fetch pastes error:', error)
+        }
+      } catch (err) {
+        console.error('Fetch pastes error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
 
     checkAuth()

@@ -33,27 +33,41 @@ export default function CreatePaste() {
     setLoading(true)
     setError(null)
 
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
 
-    const { data, error: insertError } = await supabase
-      .from('pastes')
-      .insert([
-        { 
-          title: title || 'Untitled',
-          content,
-          language,
-          is_public: isPublic,
-          author_id: user?.id || null 
-        }
-      ])
-      .select()
-      .single()
+      if (!content.trim()) {
+        setError('Please enter some code content.')
+        setLoading(false)
+        return
+      }
 
-    if (insertError) {
-      setError(insertError.message)
+      const { data, error: insertError } = await supabase
+        .from('pastes')
+        .insert([
+          { 
+            title: title || 'Untitled',
+            content: content.trim(),
+            language,
+            is_public: isPublic,
+            author_id: user?.id || null 
+          }
+        ])
+        .select()
+        .single()
+
+      if (insertError) {
+        setError(insertError.message || 'Failed to create paste. Please try again.')
+        setLoading(false)
+      } else if (data) {
+        router.push(`/p/${data.id}`)
+      } else {
+        setError('Something went wrong. Please try again.')
+        setLoading(false)
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred. Please try again.')
       setLoading(false)
-    } else {
-      router.push(`/p/${data.id}`)
     }
   }
 

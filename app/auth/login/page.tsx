@@ -29,17 +29,22 @@ function LoginContent() {
     setError(null)
     setSuccess(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (signInError) {
-      setError(signInError.message)
+      if (signInError) {
+        setError(signInError.message || 'Login failed. Please check your credentials.')
+        setLoading(false)
+      } else {
+        router.push('/')
+        router.refresh()
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred. Please try again.')
       setLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
     }
   }
 

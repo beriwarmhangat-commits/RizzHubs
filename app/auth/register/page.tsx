@@ -21,21 +21,26 @@ export default function RegisterPage() {
     setLoading(true)
     setError(null)
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: username,
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: username,
+          },
         },
-      },
-    })
+      })
 
-    if (signUpError) {
-      setError(signUpError.message)
+      if (signUpError) {
+        setError(signUpError.message || 'Registration failed. Please try again.')
+        setLoading(false)
+      } else {
+        router.push('/auth/login?message=Registration successful! Please login.')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred. Please try again.')
       setLoading(false)
-    } else {
-      router.push('/auth/login?message=Registration successful! Please login.')
     }
   }
 
